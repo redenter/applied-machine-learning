@@ -1,5 +1,6 @@
 import csv as csv
 import numpy as np
+from sklearn import preprocessing, datasets, linear_model,cross_validation
 
 
 
@@ -26,25 +27,13 @@ def prepareTrainData(trainFileName):
 
 
 def logisticRegression(X,Y):
-	Beta = np.random.rand(2,1)
-	prob = lambda Beta:1/(1 + np.exp(-(X.dot(Beta))))
-	gradient = lambda Beta: X.transpose().dot(Y-prob(Beta))
-	W = lambda Beta:prob(Beta).dot((1-prob(Beta)).transpose())
-	likelihood = lambda Beta: Y.transpose().dot(np.log(prob(Beta))) + (1-Y).transpose().dot(np.log(1-prob(Beta)))
-	hessian = lambda Beta: -1*(X.transpose().dot(W(Beta))).dot(X)
-	
+	cls = linear_model.LogisticRegression()
+	Xtrain, Xtest, Ytrain, Ytest = cross_validation.train_test_split(X,Y)
+	cls.fit(Xtrain, Ytrain)
 
-	for i in range(1,20):
-		try:
-			diff = (np.linalg.inv(hessian(Beta))).dot(gradient(Beta))
-		except:
-			break;
-		Beta = Beta - diff
-		print(likelihood(Beta))
-
-	return Beta	
-
-
+	print(cls.predict(Xtest))
+	print cls.score(Xtest, Ytest)
+	return cls
 
 
 def prepareTestData(testFileName):
@@ -69,16 +58,17 @@ def prepareTestData(testFileName):
 
 
 def predictOnTestData(X, model):
-	prob = 1/(1 + np.exp(-(X.dot(model))))
-	return prob
+	result = cls.predict(X)
+	return result.reshape(len(result),1)
 
 def writeResultToFile(Ids,result,fileName):
+	
 	resp = np.concatenate((Ids,result),1)	
 	np.savetxt(fileName,resp,delimiter = ',',fmt='%10.0f')
 
 X,Y = prepareTrainData('train.csv')
-model = logisticRegression(X,Y)
+cls = logisticRegression(X,Y)
 Ids,X = prepareTestData('test.csv')
 
-result = predictOnTestData(X,model)
+result = predictOnTestData(X,cls)
 writeResultToFile(Ids,result,'result.csv')
